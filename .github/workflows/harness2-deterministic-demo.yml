@@ -1,0 +1,39 @@
+name: Harness2 deterministic demo
+on:
+  push:
+    branches:
+      - demo/harness2-local-run-20261026
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deterministic-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run original Harness2 demo (parallel + sequential, k=2)
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m harness2.cli.demo --output runs/demo --k 2 2>&1 | tee demo-execution.log
+      - name: Print summary and example artifacts
+        if: always()
+        shell: bash
+        run: |
+          if [ -f runs/demo/demo.json ]; then cat runs/demo/demo.json; fi
+          find runs/demo -maxdepth 5 -type f | sort | head -100 || true
+      - name: Upload real execution artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness2-demo-k2-results
+          path: |
+            runs/demo/
+            demo-execution.log
+          retention-days: 30
